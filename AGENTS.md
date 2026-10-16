@@ -64,6 +64,12 @@ Before making changes, read these files in order:
    - Pydantic v2 (Data validation)
    - pytest (Testing)
  - **End of Session:** Always offer to write a session summary file in `docs/sessions/` detailing what was accomplished and the next steps.
+  - Example filename for the current session: `docs/sessions/001-foundation-and-schema.md`
+
+## Agent contribution policies
+  - Do not force push.
+  - Commit in small, logical units (backend core, API, frontend, docs separately).
+  - Coding agents should not co-author their own commits. Commit authorship should be assigned only to the human engineer responsible for the change.
 
 ## Notes
 
