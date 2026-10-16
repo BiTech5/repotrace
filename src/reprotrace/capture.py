@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from reprotrace.storage import BugReport
+from reprotrace.storage import BugReport, ReportStore
 
 
 class TraceEvent(BaseModel):
@@ -205,3 +205,30 @@ def build_report(
     }
     payload.update(overrides)
     return BugReport(**payload)
+
+
+def capture_command(
+    command: list[str],
+    store: ReportStore | None = None,
+    cwd: Path | str | None = None,
+    timeout: float | None = None,
+    **report_overrides: Any,
+) -> tuple[Trace, BugReport]:
+    """Run ``command``, build a report, and persist it when a store is given.
+
+    Args:
+        command: Argv to execute.
+        store: Store to save the report into; the report is left unsaved
+            when ``None``.
+        cwd: Working directory for the child process.
+        timeout: Seconds to wait before the process is killed.
+        **report_overrides: Forwarded to :func:`build_report`.
+
+    Returns:
+        The captured trace together with the resulting bug report.
+    """
+    trace = run_capture(command, cwd=cwd, timeout=timeout)
+    report = build_report(trace, **report_overrides)
+    if store is not None:
+        store.save(report)
+    return trace, report
