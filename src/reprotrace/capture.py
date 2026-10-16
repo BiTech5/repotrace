@@ -7,6 +7,7 @@ metadata to rebuild a :class:`~reprotrace.storage.BugReport`.
 
 from __future__ import annotations
 
+import hashlib
 import platform
 import subprocess
 import sys
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from reprotrace.storage import BugReport
 
 
 class TraceEvent(BaseModel):
@@ -162,3 +165,43 @@ def run_capture(
     )
     return trace.model_copy(update={"exit_code": completed.returncode})
 
+
+def build_report(
+    trace: Trace,
+    title: str | None = None,
+    report_id: str | None = None,
+    **overrides: Any,
+) -> BugReport:
+    """Derive a :class:`BugReport` from a captured :class:`Trace`.
+
+    Args:
+        trace: The captured run to describe.
+        title: Optional title; defaults to a summary of the command.
+        report_id: Optional identifier; defaults to a stable hash of the argv.
+        **overrides: Extra :class:`BugReport` field values, e.g. ``severity``.
+
+    Returns:
+        An unsaved bug report carrying the full trace as metadata.
+    """
+    if report_id is None:
+        report_id = hashlib.sha1(" ".join(trace.command).encode()).hexdigest()[:12]
+    if title is None:
+        summary = " ".join(trace.command)
+        failed = trace.exit_code not in (0, None)
+        title = (
+            f"Command failed: {summary}" if failed else f"Command captured: {summary}"
+        )
+
+    payload: dict[str, Any] = {
+        "id": report_id,
+        "title": title,
+        "tags": ["capture"],
+        "metadata": {
+            "exit_code": trace.exit_code,
+            "cwd": trace.cwd,
+            "environment": trace.environment,
+            "events": [event.model_dump(mode="json") for event in trace.events],
+        },
+    }
+    payload.update(overrides)
+    return BugReport(**payload)
