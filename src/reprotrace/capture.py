@@ -8,6 +8,7 @@ metadata to rebuild a :class:`~reprotrace.storage.BugReport`.
 from __future__ import annotations
 
 import platform
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -115,3 +116,49 @@ class Trace(BaseModel):
     def of_kind(self, kind: str) -> list[TraceEvent]:
         """Return every event recorded with ``kind``."""
         return [event for event in self.events if event.kind == kind]
+
+
+def run_capture(
+    command: list[str],
+    cwd: Path | str | None = None,
+    timeout: float | None = None,
+) -> Trace:
+    """Execute ``command`` and record its outcome as a :class:`Trace`.
+
+    The subprocess shares this interpreter's streams only through the
+    captured output; stdout and stderr are read back as text and appended
+    as events so failures remain inspectable after the process exits.
+
+    Args:
+        command: Argv to execute.
+        cwd: Working directory for the child process.
+        timeout: Seconds to wait before the process is killed.
+
+    Returns:
+        A trace containing the command, environment, output, and exit code.
+
+    Raises:
+        FileNotFoundError: If the executable does not exist.
+        subprocess.TimeoutExpired: If ``timeout`` elapses first.
+    """
+    trace = Trace.start(command, cwd=cwd)
+    workdir = Path(trace.cwd) if trace.cwd else None
+    completed = subprocess.run(
+        command,
+        cwd=workdir,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    if completed.stdout:
+        trace = trace.add(kind="stdout", message=completed.stdout)
+    if completed.stderr:
+        trace = trace.add(kind="stderr", message=completed.stderr)
+    trace = trace.add(
+        kind="exit",
+        message=f"exit code {completed.returncode}",
+        data={"exit_code": completed.returncode},
+    )
+    return trace.model_copy(update={"exit_code": completed.returncode})
+
