@@ -55,6 +55,16 @@ Before making changes, read these files in order:
 - Update README or other user-facing docs when behavior, configuration, or command usage changes.
 - When fixing bugs or adding features, ensure the related tests and docs stay aligned with the implementation.
 
+## Mandatory Session Workflow
+ - **Check Session History:** At the start of every new session or task, check the `docs/sessions/` directory for the most recent session markdown file to understand prior progress.
+ - **Maintain Continuity:** Do not repeat already completed modules. Build incrementally upon the existing architecture (`src/repotrace/`).
+ - **Tech Stack Constraints:** 
+   - Python 3.11+
+   - Typer (CLI)
+   - Pydantic v2 (Data validation)
+   - pytest (Testing)
+ - **End of Session:** Always offer to write a session summary file in `docs/sessions/` detailing what was accomplished and the next steps.
+
 ## Notes
 
 - This file is meant to guide AI contributors and maintainers working in the repository.
