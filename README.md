@@ -14,6 +14,20 @@ tell you honestly whether the failure is still there.
 
 RepoTrace requires **Python 3.12 or newer**.
 
+Install the published package from PyPI:
+
+```bash
+pip install repotrace
+```
+
+Or with `uv`:
+
+```bash
+uv add repotrace
+```
+
+If you are working from a local checkout, use an editable install instead:
+
 ```bash
 # From a checkout, editable install (recommended for development)
 uv sync
