@@ -476,4 +476,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Not yet decided — no license file is present in the repository.
+[MIT LICENSE](LICENSE)
