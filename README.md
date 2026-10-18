@@ -22,7 +22,7 @@ uv sync
 pip install -e .
 ```
 
-This provides the `reprotrace` console script.
+This provides the `repotrace` console script.
 
 ## Quick start
 
@@ -30,22 +30,22 @@ Capture a failing command. Note that the command is passed through verbatim, so
 its own flags (`-c`, `--flag`, …) are not interpreted by RepoTrace:
 
 ```bash
-reprotrace capture python -m pytest tests/test_thing.py -q
+repotrace capture python -m pytest tests/test_thing.py -q
 ```
 
 This prints the captured report id and exit code, and writes a JSON report to
-`.reprotrace/reports/<id>.json`. `capture` exits with the command's own exit
+`.repotrace/reports/<id>.json`. `capture` exits with the command's own exit
 code, so it can sit directly in a shell pipeline.
 
 ```bash
-reprotrace list
-reprotrace show <id>
+repotrace list
+repotrace show <id>
 
 # Does it still fail the same way?
-reprotrace replay <id>
+repotrace replay <id>
 
 # Or does the whole corpus still reproduce?
-reprotrace replay-all
+repotrace replay-all
 ```
 
 ## The workflow
@@ -73,12 +73,12 @@ capture ──► report store ──► replay ──► report / generate
 Run a command, record its trace, and persist a bug report.
 
 ```bash
-reprotrace capture [OPTIONS] COMMAND...
+repotrace capture [OPTIONS] COMMAND...
 ```
 
 | Option | Description |
 | --- | --- |
-| `--store, -s PATH` | Report store directory. Default `.reprotrace/reports`. |
+| `--store, -s PATH` | Report store directory. Default `.repotrace/reports`. |
 | `--cwd PATH` | Working directory for the run. |
 | `--timeout SECONDS` | Seconds to wait before the command is killed. |
 | `--title TEXT` | Title for the report (default: a summary of the command). |
@@ -88,7 +88,7 @@ reprotrace capture [OPTIONS] COMMAND...
 | `--keep-going` | Exit 0 even when the captured command failed. |
 
 ```bash
-reprotrace capture --severity high --tags flaky,ci \
+repotrace capture --severity high --tags flaky,ci \
   python -c "import sys; print('boom'); sys.exit(7)"
 ```
 
@@ -100,7 +100,7 @@ Print the id of every stored report, one per line, followed by a count. Prints
 `no reports stored` for an empty store.
 
 ```bash
-reprotrace list [--store PATH]
+repotrace list [--store PATH]
 ```
 
 ### `show`
@@ -108,7 +108,7 @@ reprotrace list [--store PATH]
 Print one report's fields and metadata as a table.
 
 ```bash
-reprotrace show [--store PATH] REPORT_ID [--markdown]
+repotrace show [--store PATH] REPORT_ID [--markdown]
 ```
 
 `--markdown` renders the full Markdown document instead of the summary table.
@@ -118,7 +118,7 @@ reprotrace show [--store PATH] REPORT_ID [--markdown]
 Re-run a stored command and compare it with the recorded failure.
 
 ```bash
-reprotrace replay [OPTIONS] REPORT_ID
+repotrace replay [OPTIONS] REPORT_ID
 ```
 
 | Option | Description |
@@ -137,7 +137,7 @@ that will legitimately differ between machines.
 Replay every stored report and summarise the outcomes.
 
 ```bash
-reprotrace replay-all [OPTIONS]
+repotrace replay-all [OPTIONS]
 ```
 
 | Option | Description |
@@ -158,7 +158,7 @@ are counted as failures rather than aborting the sweep.
 Render a stored report as Markdown.
 
 ```bash
-reprotrace report [OPTIONS] REPORT_ID
+repotrace report [OPTIONS] REPORT_ID
 ```
 
 | Option | Description |
@@ -175,7 +175,7 @@ reprotrace report [OPTIONS] REPORT_ID
 Emit a standalone `pytest` regression test from a stored report.
 
 ```bash
-reprotrace generate [OPTIONS] REPORT_ID
+repotrace generate [OPTIONS] REPORT_ID
 ```
 
 | Option | Description |
@@ -212,17 +212,17 @@ part of the interface:
 ### Capture and inspect
 
 ```console
-$ reprotrace capture python -c "import sys; print('boom'); sys.exit(7)"
+$ repotrace capture python -c "import sys; print('boom'); sys.exit(7)"
 captured 5303b4f97c12
 exit code 7
 boom
 
-$ reprotrace list
+$ repotrace list
 5303b4f97c12
 
 1 report(s)
 
-$ reprotrace show 5303b4f97c12
+$ repotrace show 5303b4f97c12
                               Report 5303b4f97c12
 ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Field       ┃ Value                                                          ┃
@@ -244,7 +244,7 @@ metadata
 ### Replay a single report
 
 ```console
-$ reprotrace replay 5303b4f97c12
+$ repotrace replay 5303b4f97c12
 5303b4f97c12 `matched` — no differences
 
 $ echo $?
@@ -254,7 +254,7 @@ $ echo $?
 ### Sweep the whole store
 
 ```console
-$ reprotrace replay-all
+$ repotrace replay-all
                     Replay summary
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━┓
 ┃ Report       ┃ Outcome    ┃ Exit code ┃ Differences ┃
@@ -267,7 +267,7 @@ replayed 1 · reproduced 1 · differs 0 · failed 0 · reproducibility 100%
 ### Render a Markdown report with its verdict
 
 ```console
-$ reprotrace report 5303b4f97c12 --replay
+$ repotrace report 5303b4f97c12 --replay
 5303b4f97c12 `matched` — no differences
 # Replay report — reproduced
 
@@ -301,7 +301,7 @@ Differences: none
 ### Write a Markdown sweep to a file
 
 ```console
-$ reprotrace replay-all -o sweep.md
+$ repotrace replay-all -o sweep.md
 wrote sweep.md
 
 $ cat sweep.md
@@ -321,7 +321,7 @@ $ cat sweep.md
 ### Generate a regression test
 
 ```console
-$ reprotrace generate 5303b4f97c12 -o tests/test_regression_5303.py
+$ repotrace generate 5303b4f97c12 -o tests/test_regression_5303.py
 wrote tests/test_regression_5303.py
 
 $ pytest tests/test_regression_5303.py
@@ -362,12 +362,12 @@ Every command has a programmatic equivalent, so RepoTrace can be embedded in
 tooling rather than driven through the shell.
 
 ```python
-from reprotrace.capture import capture_command
-from reprotrace.replay import replay_from_store
-from reprotrace.report import format_report
-from reprotrace.storage import ReportStore
+from repotrace.capture import capture_command
+from repotrace.replay import replay_from_store
+from repotrace.report import format_report
+from repotrace.storage import ReportStore
 
-store = ReportStore(".reprotrace/reports")
+store = ReportStore(".repotrace/reports")
 
 # Capture and persist.
 trace, report = capture_command(
@@ -388,24 +388,24 @@ print(format_report(report, result=result))
 
 | Module | Responsibility |
 | --- | --- |
-| `reprotrace.storage` | The `BugReport` schema and the JSON-file `ReportStore`. |
-| `reprotrace.capture` | `Trace`, `TraceEvent`, `run_capture`, `build_report`, `capture_command`. |
-| `reprotrace.generator` | `Reproduction` plus `generate_test` / `write_test`. |
-| `reprotrace.replay` | `Outcome`, `ReplayResult`, `ReplaySummary`, and the `replay*` functions. |
-| `reprotrace.report` | `format_report`, `format_replays`, and their write counterparts. |
-| `reprotrace.cli` | The `reprotrace` Typer application. |
+| `repotrace.storage` | The `BugReport` schema and the JSON-file `ReportStore`. |
+| `repotrace.capture` | `Trace`, `TraceEvent`, `run_capture`, `build_report`, `capture_command`. |
+| `repotrace.generator` | `Reproduction` plus `generate_test` / `write_test`. |
+| `repotrace.replay` | `Outcome`, `ReplayResult`, `ReplaySummary`, and the `replay*` functions. |
+| `repotrace.report` | `format_report`, `format_replays`, and their write counterparts. |
+| `repotrace.cli` | The `repotrace` Typer application. |
 
 ### Key API
 
 ```python
-from reprotrace.capture import Trace, run_capture, build_report, capture_command
-from reprotrace.storage import BugReport, ReportStore
-from reprotrace.generator import Reproduction, generate_test, write_test
-from reprotrace.replay import (
+from repotrace.capture import Trace, run_capture, build_report, capture_command
+from repotrace.storage import BugReport, ReportStore
+from repotrace.generator import Reproduction, generate_test, write_test
+from repotrace.replay import (
     Outcome, ReplayResult, ReplaySummary,
     replay, replay_report, replay_from_store, replay_all, diff,
 )
-from reprotrace.report import (
+from repotrace.report import (
     format_report, write_report, format_replays, write_replays,
     render_result_line, build_summary, outcome_label,
 )
@@ -431,10 +431,10 @@ JSON-serialisable mapping of expected-versus-observed values.
 ## Report store
 
 Reports live as one JSON file per report under the store root, which defaults to
-`.reprotrace/reports` and is created on demand:
+`.repotrace/reports` and is created on demand:
 
 ```
-.reprotrace/
+.repotrace/
 └── reports/
     ├── 5303b4f97c12.json
     └── a1b2c3d4e5f6.json

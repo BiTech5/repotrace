@@ -2,22 +2,22 @@
 
 The package is organised as a pipeline:
 
-- :mod:`reprotrace.storage` — the ``BugReport`` schema and JSON-file store.
-- :mod:`reprotrace.capture` — run a command and record its trace.
-- :mod:`reprotrace.generator` — flatten a failure and emit a pytest regression
+- :mod:`repotrace.storage` — the ``BugReport`` schema and JSON-file store.
+- :mod:`repotrace.capture` — run a command and record its trace.
+- :mod:`repotrace.generator` — flatten a failure and emit a pytest regression
   test.
-- :mod:`reprotrace.replay` — re-run a recorded command and compare it with the
+- :mod:`repotrace.replay` — re-run a recorded command and compare it with the
   record.
-- :mod:`reprotrace.report` — render reports and replay sweeps as Markdown.
-- :mod:`reprotrace.cli` — the ``reprotrace`` command line interface.
+- :mod:`repotrace.report` — render reports and replay sweeps as Markdown.
+- :mod:`repotrace.cli` — the ``repotrace`` command line interface.
 
-``main`` is re-exported so ``reprotrace = "reprotrace:main"`` in ``pyproject.toml``
+``main`` is re-exported so ``repotrace = "repotrace:main"`` in ``pyproject.toml``
 resolves to the Typer application.
 """
 
 from __future__ import annotations
 
-from reprotrace.cli import app, main
+from repotrace.cli import app, main
 
 __all__ = ["app", "main"]
 

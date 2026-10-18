@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from reprotrace.capture import run_capture
-from reprotrace.replay import Outcome, ReplayResult, ReplaySummary
-from reprotrace.report import (
+from repotrace.capture import run_capture
+from repotrace.replay import Outcome, ReplayResult, ReplaySummary
+from repotrace.report import (
     ReportSection,
     build_summary,
     escape_cell,
@@ -20,7 +20,7 @@ from reprotrace.report import (
     write_replays,
     write_report,
 )
-from reprotrace.storage import BugReport
+from repotrace.storage import BugReport
 
 
 def make_report(report_id: str = "abc123", **kwargs) -> BugReport:

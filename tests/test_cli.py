@@ -4,9 +4,9 @@ import sys
 import pytest
 from typer.testing import CliRunner
 
-from reprotrace import cli
-from reprotrace.cli import app
-from reprotrace.storage import ReportStore
+from repotrace import cli
+from repotrace.cli import app
+from repotrace.storage import ReportStore
 
 runner = CliRunner()
 

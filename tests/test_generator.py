@@ -3,14 +3,14 @@ import sys
 
 import pytest
 
-from reprotrace.capture import Trace, build_report, run_capture
-from reprotrace.generator import (
+from repotrace.capture import Trace, build_report, run_capture
+from repotrace.generator import (
     Reproduction,
     generate_test,
     slugify,
     write_test,
 )
-from reprotrace.storage import BugReport
+from repotrace.storage import BugReport
 
 
 def make_trace() -> Trace:

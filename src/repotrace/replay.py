@@ -18,9 +18,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from reprotrace.capture import Trace, run_capture
-from reprotrace.generator import Reproduction
-from reprotrace.storage import BugReport, ReportStore
+from repotrace.capture import Trace, run_capture
+from repotrace.generator import Reproduction
+from repotrace.storage import BugReport, ReportStore
 
 
 class Outcome(str, Enum):

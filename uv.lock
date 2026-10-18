@@ -224,7 +224,7 @@ wheels = [
 ]
 
 [[package]]
-name = "reprotrace"
+name = "repotrace"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from reprotrace.capture import (
+from repotrace.capture import (
     Trace,
     TraceEvent,
     build_report,
@@ -12,7 +12,7 @@ from reprotrace.capture import (
     collect_environment,
     run_capture,
 )
-from reprotrace.storage import ReportStore
+from repotrace.storage import ReportStore
 
 
 def test_trace_event_is_frozen():

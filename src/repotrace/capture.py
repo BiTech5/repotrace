@@ -2,7 +2,7 @@
 
 Turns a failing command execution into structured trace artifacts: the
 command that ran, its output, the surrounding environment, and enough
-metadata to rebuild a :class:`~reprotrace.storage.BugReport`.
+metadata to rebuild a :class:`~repotrace.storage.BugReport`.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from reprotrace.storage import BugReport, ReportStore
+from repotrace.storage import BugReport, ReportStore
 
 
 class TraceEvent(BaseModel):

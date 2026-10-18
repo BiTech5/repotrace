@@ -20,7 +20,7 @@ packaging==26.3
 pluggy==1.7.0
     # via pytest
 pydantic==2.14.1
-    # via reprotrace
+    # via repotrace
 pydantic-core==2.50.1
     # via pydantic
 pygments==2.21.0
@@ -30,13 +30,13 @@ pygments==2.21.0
 pytest==9.1.1
 rich==15.0.0
     # via
-    #   reprotrace
+    #   repotrace
     #   typer
 ruff==0.17.1
 shellingham==1.5.4
     # via typer
 typer==0.27.3
-    # via reprotrace
+    # via repotrace
 typing-extensions==4.16.0
     # via
     #   pydantic

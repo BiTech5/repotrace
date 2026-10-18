@@ -1,7 +1,7 @@
 """Persistence layer for bug reports captured by RepoTrace.
 
 The store keeps one JSON file per report inside a root directory
-(``.reprotrace/reports`` by default), which makes results easy to inspect,
+(``.repotrace/reports`` by default), which makes results easy to inspect,
 diff, and version alongside a project.
 """
 
@@ -55,7 +55,7 @@ class ReportStore:
     created on demand, so constructing a store is always safe.
     """
 
-    def __init__(self, root: Path | str = ".reprotrace/reports") -> None:
+    def __init__(self, root: Path | str = ".repotrace/reports") -> None:
         """Create a store rooted at ``root``, creating the directory if needed."""
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)

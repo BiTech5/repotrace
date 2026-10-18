@@ -24,7 +24,7 @@ uv sync
 This installs the package in editable mode plus the `dev` dependency group
 (`pytest`, `ruff`). Requires **Python 3.12 or newer**.
 
-Activate the environment if you want the `reprotrace` console script on your
+Activate the environment if you want the `repotrace` console script on your
 `PATH`:
 
 ```bash
@@ -169,5 +169,5 @@ session files stay local. Do not force them into history with `git add -f`.
 ## Reporting bugs
 
 Open an issue with the command you ran, the output you saw, and — if RepoTrace
-itself is misbehaving — the relevant report JSON from `.reprotrace/reports/`.
+itself is misbehaving — the relevant report JSON from `.repotrace/reports/`.
 That file is usually the fastest way to reproduce the problem.

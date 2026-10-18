@@ -2,7 +2,7 @@
 
 ## Project purpose
 
-ReproTrace is intended to help capture, inspect, and compare execution traces for reproducibility workflows. The project focuses on analyzing command execution, environment metadata, and trace artifacts so that debugging and reproduction are easier.
+RepoTrace is intended to help capture, inspect, and compare execution traces for reproducibility workflows. The project focuses on analyzing command execution, environment metadata, and trace artifacts so that debugging and reproduction are easier.
 
 ## Repository layout
 

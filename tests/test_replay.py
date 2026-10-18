@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from reprotrace.capture import Trace, run_capture
-from reprotrace.generator import Reproduction
-from reprotrace.replay import (
+from repotrace.capture import Trace, run_capture
+from repotrace.generator import Reproduction
+from repotrace.replay import (
     Outcome,
     ReplayResult,
     diff,
@@ -15,7 +15,7 @@ from reprotrace.replay import (
     replay_from_store,
     replay_report,
 )
-from reprotrace.storage import BugReport, ReportStore
+from repotrace.storage import BugReport, ReportStore
 
 
 def make_trace(exit_code: int = 2) -> Trace:

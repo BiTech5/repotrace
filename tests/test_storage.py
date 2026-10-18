@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from reprotrace.storage import BugReport, ReportStore
+from repotrace.storage import BugReport, ReportStore
 
 
 def make_report(report_id: str = "abc123", **kwargs) -> BugReport:

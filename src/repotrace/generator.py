@@ -1,8 +1,8 @@
 """Regression test generation for RepoTrace.
 
-Turns a captured failure — either a :class:`~reprotrace.storage.BugReport`
-produced by :mod:`reprotrace.capture` or a raw
-:class:`~reprotrace.capture.Trace` — into a standalone ``pytest`` test that
+Turns a captured failure — either a :class:`~repotrace.storage.BugReport`
+produced by :mod:`repotrace.capture` or a raw
+:class:`~repotrace.capture.Trace` — into a standalone ``pytest`` test that
 re-runs the recorded command and asserts the original failure signature
 (exit code and captured output) has not changed.
 
@@ -20,8 +20,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from reprotrace.capture import Trace
-from reprotrace.storage import BugReport
+from repotrace.capture import Trace
+from repotrace.storage import BugReport
 
 _MAX_NAME_LENGTH = 60
 
@@ -30,8 +30,8 @@ class Reproduction(BaseModel):
     """Normalised description of a failure used as generator input.
 
     A ``Reproduction`` flattens the differences between a raw
-    :class:`~reprotrace.capture.Trace` and the metadata embedded in a
-    :class:`~reprotrace.storage.BugReport` so that test generation only has to
+    :class:`~repotrace.capture.Trace` and the metadata embedded in a
+    :class:`~repotrace.storage.BugReport` so that test generation only has to
     deal with a single shape.
     """
 
@@ -71,7 +71,7 @@ class Reproduction(BaseModel):
         """Build a reproduction from a persisted :class:`BugReport`.
 
         The command and output are recovered from ``report.metadata`` as written
-        by :func:`reprotrace.capture.build_report`. An explicit ``command`` key
+        by :func:`repotrace.capture.build_report`. An explicit ``command`` key
         takes precedence over the command event when present.
 
         Raises:
@@ -83,7 +83,7 @@ class Reproduction(BaseModel):
         if not command:
             msg = (
                 f"Report {report.id!r} does not contain a command; it was "
-                "probably not produced by reprotrace.capture."
+                "probably not produced by repotrace.capture."
             )
             raise ValueError(msg)
         return cls(

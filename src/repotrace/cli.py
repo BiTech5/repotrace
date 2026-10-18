@@ -2,7 +2,7 @@
 
 The CLI exposes the full workflow — capture a failing command, list and inspect
 stored reports, replay them, and render Markdown reports — through a single
-``reprotrace`` entry point.
+``repotrace`` entry point.
 
 Subcommands:
 
@@ -28,16 +28,16 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from reprotrace.capture import capture_command
-from reprotrace.generator import generate_test, write_test
-from reprotrace.replay import (
+from repotrace.capture import capture_command
+from repotrace.generator import generate_test, write_test
+from repotrace.replay import (
     Outcome,
     ReplayResult,
     ReplaySummary,
     replay_all,
     replay_from_store,
 )
-from reprotrace.report import (
+from repotrace.report import (
     build_summary,
     format_exit_code,
     format_report,
@@ -45,14 +45,14 @@ from reprotrace.report import (
     write_replays,
     write_report,
 )
-from reprotrace.storage import BugReport, ReportStore
+from repotrace.storage import BugReport, ReportStore
 
 # Typer requires its Argument/Option factories to be called in the signature,
 # which B008 flags by design.
 # ruff: noqa: B008
 
 app = typer.Typer(
-    name="reprotrace",
+    name="repotrace",
     help="Turn failing commands into reproducible bug reports and regression tests.",
     no_args_is_help=True,
     add_completion=False,
@@ -60,7 +60,7 @@ app = typer.Typer(
 
 console = Console()
 
-DEFAULT_STORE = ".reprotrace/reports"
+DEFAULT_STORE = ".repotrace/reports"
 
 
 def _store(root: str | None) -> ReportStore:
@@ -512,7 +512,7 @@ def version() -> None:
     from importlib.metadata import version as _version
 
     try:
-        console.print(_version("reprotrace"))
+        console.print(_version("repotrace"))
     except PackageNotFoundError:  # pragma: no cover - running from a source tree
         console.print("[dim]unknown[/dim]")
 

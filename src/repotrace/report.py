@@ -1,7 +1,7 @@
 """Report rendering for RepoTrace.
 
-Turns a :class:`~reprotrace.storage.BugReport` or a
-:class:`~reprotrace.replay.ReplayResult` / :class:`~reprotrace.replay.ReplaySummary`
+Turns a :class:`~repotrace.storage.BugReport` or a
+:class:`~repotrace.replay.ReplayResult` / :class:`~repotrace.replay.ReplaySummary`
 into inspectable output. Two renderers are provided:
 
 - :func:`format_report` / :func:`write_report` — a self-contained Markdown
@@ -23,8 +23,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from reprotrace.replay import Outcome, ReplayResult, ReplaySummary
-from reprotrace.storage import BugReport
+from repotrace.replay import Outcome, ReplayResult, ReplaySummary
+from repotrace.storage import BugReport
 
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S UTC"
 
@@ -162,7 +162,7 @@ def _command_from_metadata(metadata: dict[str, Any]) -> list[str]:
     """Recover the recorded argv from a report's metadata.
 
     An explicit ``command`` key wins; otherwise the first ``command`` event's
-    ``argv`` is used, which is where :func:`reprotrace.capture.build_report`
+    ``argv`` is used, which is where :func:`repotrace.capture.build_report`
     records it.
     """
     explicit = metadata.get("command")
