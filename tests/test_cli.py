@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from uuid import UUID
 
 import pytest
 from typer.testing import CliRunner
@@ -64,8 +65,8 @@ def capture_report(store, command=None, **kwargs) -> str:
         "capture",
         "--store",
         str(store),
-        *(command or CMD_FAIL),
         *cli_opts(**kwargs),
+        *(command or CMD_FAIL),
     )
     assert result.exit_code == 3, result.output
     return result.output.split()[1]
@@ -78,7 +79,8 @@ def rewrite_exit_code(store, report_id: str, exit_code: int) -> None:
     store_obj.save(
         stored.model_copy(
             update={"metadata": dict(stored.metadata, exit_code=exit_code)}
-        )
+        ),
+        overwrite=True,
     )
 
 
@@ -123,12 +125,14 @@ def test_capture_passes_tags_and_severity(store):
     assert "flaky, ci" in result.output
 
 
-def test_capture_defaults_to_hash_id(store):
+def test_capture_keeps_repeated_runs_with_distinct_uuid_ids(store):
     first = capture_report(store)
     second = capture_report(store)
 
-    assert first == second
-    assert len(first) == 12
+    assert first != second
+    assert UUID(first).version == 4
+    assert UUID(second).version == 4
+    assert set(ReportStore(store).list_ids()) == {first, second}
 
 
 def test_capture_accepts_explicit_id(store):
@@ -139,19 +143,147 @@ def test_capture_accepts_explicit_id(store):
     assert (store / "custom-id.json").exists()
 
 
+@pytest.mark.parametrize("keep_going", [False, True])
+def test_capture_rejects_duplicate_id_before_running_command(store, keep_going):
+    first = run("capture", "--store", str(store), "--id", "fixed", *CMD_FAIL)
+    assert first.exit_code == 3
+    original = (store / "fixed.json").read_bytes()
+    marker = store.parent / "duplicate-ran.txt"
+    options = ["--keep-going"] if keep_going else []
+
+    result = run(
+        "capture",
+        "--store",
+        str(store),
+        "--id",
+        "fixed",
+        "--cwd",
+        str(store.parent),
+        *options,
+        sys.executable,
+        "-c",
+        "from pathlib import Path; Path('duplicate-ran.txt').write_text('ran')",
+    )
+
+    assert result.exit_code == 2
+    assert "already exists" in result.output
+    assert "--overwrite" in result.output
+    assert (store / "fixed.json").read_bytes() == original
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("command, exit_code", [(CMD_OK, 0), (CMD_FAIL, 3)])
+def test_capture_overwrites_only_when_explicitly_requested(store, command, exit_code):
+    first = run(
+        "capture",
+        "--store",
+        str(store),
+        "--id",
+        "fixed",
+        "--title",
+        "Original",
+        *CMD_FAIL,
+    )
+    assert first.exit_code == 3
+
+    result = run(
+        "capture",
+        "--store",
+        str(store),
+        "--id",
+        "fixed",
+        "--overwrite",
+        "--title",
+        "Replacement",
+        *command,
+    )
+
+    assert result.exit_code == exit_code
+    assert "captured fixed" in result.output
+    assert ReportStore(store).load("fixed").metadata["exit_code"] == exit_code
+    assert ReportStore(store).load("fixed").title == "Replacement"
+    assert ReportStore(store).list_ids() == ["fixed"]
+
+
+def test_capture_preserves_a_report_created_while_the_command_runs(store):
+    payload = '{"id": "fixed", "title": "Another capture"}'
+    result = run(
+        "capture",
+        "--store",
+        str(store),
+        "--id",
+        "fixed",
+        "--cwd",
+        str(store.parent),
+        sys.executable,
+        "-c",
+        f"from pathlib import Path; Path('reports/fixed.json').write_text({payload!r}, encoding='utf-8')",
+    )
+
+    assert result.exit_code == 2
+    assert "--overwrite" in result.output
+    assert (store / "fixed.json").read_text(encoding="utf-8") == payload
+
+
+@pytest.mark.parametrize("separator", [[], ["--"]])
+def test_capture_forwards_child_overwrite_flag(store, separator):
+    result = run(
+        "capture",
+        "--store",
+        str(store),
+        *separator,
+        sys.executable,
+        "-c",
+        "import sys; print(sys.argv[1])",
+        "--overwrite",
+    )
+
+    assert result.exit_code == 0
+    report = ReportStore(store).list()[0]
+    stdout = [
+        event["message"]
+        for event in report.metadata["events"]
+        if event["kind"] == "stdout"
+    ]
+    assert stdout == ["--overwrite\n"]
+
+
+def test_child_overwrite_flag_does_not_authorize_replacing_a_report(store):
+    first = run("capture", "--store", str(store), "--id", "fixed", *CMD_OK)
+    assert first.exit_code == 0
+    original = (store / "fixed.json").read_bytes()
+
+    result = run(
+        "capture",
+        "--store",
+        str(store),
+        "--id",
+        "fixed",
+        sys.executable,
+        "-c",
+        "import sys; print(sys.argv[1:])",
+        "--overwrite",
+    )
+
+    assert result.exit_code == 2
+    assert "already exists" in result.output
+    assert (store / "fixed.json").read_bytes() == original
+
+
 # --- list / show --------------------------------------------------------
 
 
 def test_list_reports(store):
-    """Two captures of the same command produce one report id (a hash)."""
+    """Repeated captures remain separate reports in the list."""
     first = capture_report(store)
     second = capture_report(store)
 
     result = run("list", "--store", str(store))
 
     assert result.exit_code == 0
-    assert "1 report(s)" in result.output
-    assert first == second
+    assert "2 report(s)" in result.output
+    assert first in result.output
+    assert second in result.output
 
 
 def test_list_reports_empty_store(store):

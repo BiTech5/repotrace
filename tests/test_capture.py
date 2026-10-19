@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -110,14 +111,15 @@ def test_build_report_from_failing_trace(tmp_path):
     assert len(report.metadata["events"]) == len(trace.events)
 
 
-def test_build_report_defaults_id_to_command_hash():
+def test_build_report_assigns_a_new_uuid_to_each_run():
     trace = Trace.start(["echo", "hi"])
 
     first = build_report(trace)
     second = build_report(trace)
 
-    assert first.id == second.id
-    assert len(first.id) == 12
+    assert first.id != second.id
+    assert UUID(first.id).version == 4
+    assert UUID(second.id).version == 4
 
 
 def test_build_report_accepts_overrides():
@@ -143,3 +145,29 @@ def test_capture_command_without_store_returns_unsaved_report(tmp_path):
 
     assert trace.exit_code == 0
     assert report.id
+
+
+def test_capture_command_preserves_existing_explicit_id(tmp_path):
+    store = ReportStore(tmp_path)
+    command = [sys.executable, "-c", "print('ok')"]
+    capture_command(command, store=store, report_id="fixed", title="Original")
+    original = (tmp_path / "fixed.json").read_bytes()
+
+    with pytest.raises(FileExistsError):
+        capture_command(command, store=store, report_id="fixed", title="Replacement")
+
+    assert (tmp_path / "fixed.json").read_bytes() == original
+
+
+def test_capture_command_can_explicitly_overwrite_a_report(tmp_path):
+    store = ReportStore(tmp_path)
+    command = [sys.executable, "-c", "print('ok')"]
+    capture_command(command, store=store, report_id="fixed", title="Original")
+
+    trace, report = capture_command(
+        command, store=store, report_id="fixed", title="Replacement", overwrite=True
+    )
+
+    assert trace.exit_code == 0
+    assert report.id == "fixed"
+    assert store.load("fixed").title == "Replacement"

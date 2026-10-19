@@ -159,7 +159,12 @@ def _print_replay_table(summary: ReplaySummary) -> None:
 
 
 @app.command(
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+    context_settings={
+        "ignore_unknown_options": True,
+        "allow_extra_args": True,
+        # Child arguments must not authorize report replacement.
+        "allow_interspersed_args": False,
+    }
 )
 def capture(
     command: list[str] = typer.Argument(..., help="Command to run and capture."),
@@ -177,7 +182,10 @@ def capture(
     ),
     title: str | None = typer.Option(None, "--title", help="Title for the report."),
     report_id: str | None = typer.Option(
-        None, "--id", help="Report id (default: a hash of the command)."
+        None, "--id", help="Report id (default: a fresh UUID4)."
+    ),
+    overwrite: bool = typer.Option(
+        False, "--overwrite", help="Replace an existing report with the same id."
     ),
     severity: str | None = typer.Option(
         None, "--severity", help="Severity, e.g. high."
@@ -198,16 +206,24 @@ def capture(
         overrides["tags"] = tag_list
 
     try:
+        report_store = _store(store)
+        if report_id is not None and not overwrite and report_store.exists(report_id):
+            raise FileExistsError(f"Report {report_id!r} already exists.")
         trace, report = capture_command(
             command,
-            store=_store(store),
+            store=report_store,
             cwd=cwd,
             timeout=timeout,
             title=title,
             report_id=report_id,
             severity=severity,
+            overwrite=overwrite,
             **overrides,
         )
+    except FileExistsError as error:
+        console.print(f"[red]cannot save report:[/red] {error}")
+        console.print("Use --overwrite to replace an existing report.")
+        raise typer.Exit(2) from error
     except FileNotFoundError as error:
         console.print(f"[red]command not found:[/red] {error}")
         raise typer.Exit(2) from error

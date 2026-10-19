@@ -96,7 +96,8 @@ repotrace capture [OPTIONS] COMMAND...
 | `--cwd PATH` | Working directory for the run. |
 | `--timeout SECONDS` | Seconds to wait before the command is killed. |
 | `--title TEXT` | Title for the report (default: a summary of the command). |
-| `--id TEXT` | Report id (default: a 12-char hash of the argv). |
+| `--id TEXT` | Report id (default: a fresh UUID4). |
+| `--overwrite` | Replace an existing report with the same id. |
 | `--severity TEXT` | Severity, e.g. `high`. |
 | `--tags TEXT` | Comma-separated tags, e.g. `flaky,ci`. |
 | `--keep-going` | Exit 0 even when the captured command failed. |
@@ -107,6 +108,13 @@ repotrace capture --severity high --tags flaky,ci \
 ```
 
 Captured stdout and stderr are echoed to the console as well as stored.
+
+Each capture gets a new UUID4 by default, so running the same command again
+keeps both reports. You can still supply a custom `--id`. Reusing an existing
+id exits with code 2 and leaves the stored report unchanged, unless you pass
+`--overwrite` before the command to replace it deliberately.
+Place all RepoTrace options before `COMMAND`; arguments after it belong to
+the captured command, including any `--overwrite` option of its own.
 
 ### `list`
 
@@ -226,7 +234,7 @@ part of the interface:
 ### Capture and inspect
 
 ```console
-$ repotrace capture python -c "import sys; print('boom'); sys.exit(7)"
+$ repotrace capture --id 5303b4f97c12 python -c "import sys; print('boom'); sys.exit(7)"
 captured 5303b4f97c12
 exit code 7
 boom
@@ -374,6 +382,10 @@ def test_regression_5303b4f97c12() -> None:
 
 Every command has a programmatic equivalent, so RepoTrace can be embedded in
 tooling rather than driven through the shell.
+
+`ReportStore.save(report)` raises `FileExistsError` if the id already exists.
+Pass `overwrite=True` to `save` or `capture_command` only when you intend to
+replace that report.
 
 ```python
 from repotrace.capture import capture_command

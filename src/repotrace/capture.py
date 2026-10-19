@@ -7,13 +7,13 @@ metadata to rebuild a :class:`~repotrace.storage.BugReport`.
 
 from __future__ import annotations
 
-import hashlib
 import platform
 import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -177,14 +177,14 @@ def build_report(
     Args:
         trace: The captured run to describe.
         title: Optional title; defaults to a summary of the command.
-        report_id: Optional identifier; defaults to a stable hash of the argv.
+        report_id: Optional identifier; defaults to a fresh UUID4.
         **overrides: Extra :class:`BugReport` field values, e.g. ``severity``.
 
     Returns:
         An unsaved bug report carrying the full trace as metadata.
     """
     if report_id is None:
-        report_id = hashlib.sha1(" ".join(trace.command).encode()).hexdigest()[:12]
+        report_id = uuid4().hex
     if title is None:
         summary = " ".join(trace.command)
         failed = trace.exit_code not in (0, None)
@@ -212,6 +212,8 @@ def capture_command(
     store: ReportStore | None = None,
     cwd: Path | str | None = None,
     timeout: float | None = None,
+    *,
+    overwrite: bool = False,
     **report_overrides: Any,
 ) -> tuple[Trace, BugReport]:
     """Run ``command``, build a report, and persist it when a store is given.
@@ -222,13 +224,17 @@ def capture_command(
             when ``None``.
         cwd: Working directory for the child process.
         timeout: Seconds to wait before the process is killed.
+        overwrite: Allow replacing an existing report in the store.
         **report_overrides: Forwarded to :func:`build_report`.
 
     Returns:
         The captured trace together with the resulting bug report.
+
+    Raises:
+        FileExistsError: If the report exists and ``overwrite`` is false.
     """
     trace = run_capture(command, cwd=cwd, timeout=timeout)
     report = build_report(trace, **report_overrides)
     if store is not None:
-        store.save(report)
+        store.save(report, overwrite=overwrite)
     return trace, report
