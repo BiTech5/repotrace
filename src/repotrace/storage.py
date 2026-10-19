@@ -44,7 +44,8 @@ class BugReport(BaseModel):
         default_factory=list, description="List of tags associated with the bug report"
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata related to the bug report"
+        default_factory=dict,
+        description="Additional metadata related to the bug report",
     )
 
 
@@ -64,11 +65,21 @@ class ReportStore:
         """Return the on-disk path for ``report_id``."""
         return self.root / f"{report_id}.json"
 
-    def save(self, report: BugReport) -> Path:
-        """Persist ``report``, refreshing ``updated_at``, and return its path."""
+    def save(self, report: BugReport, *, overwrite: bool = False) -> Path:
+        """Persist ``report``, refreshing ``updated_at``, and return its path.
+
+        Args:
+            report: Report to persist.
+            overwrite: Allow replacing a report with the same identifier.
+
+        Raises:
+            FileExistsError: If the report exists and ``overwrite`` is false.
+        """
         stored = report.model_copy(update={"updated_at": datetime.now(UTC)})
         path = self._path(stored.id)
-        path.write_text(stored.model_dump_json(indent=2), encoding="utf-8")
+        payload = stored.model_dump_json(indent=2)
+        with path.open("w" if overwrite else "x", encoding="utf-8") as file:
+            file.write(payload)
         return path
 
     def load(self, report_id: str) -> BugReport:
