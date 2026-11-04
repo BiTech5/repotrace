@@ -292,7 +292,6 @@ def test_replay_rejects_unsupported_source():
 
 
 def _report_from_trace(trace: Trace) -> BugReport:
-    """Wrap ``trace`` in a report whose metadata carries its recorded output."""
     return BugReport(
         id="from-trace",
         title="captured",

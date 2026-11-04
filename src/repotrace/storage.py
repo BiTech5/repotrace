@@ -1,10 +1,3 @@
-"""Persistence layer for bug reports captured by RepoTrace.
-
-The store keeps one JSON file per report inside a root directory
-(``.repotrace/reports`` by default), which makes results easy to inspect,
-diff, and version alongside a project.
-"""
-
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -50,19 +43,11 @@ class BugReport(BaseModel):
 
 
 class ReportStore:
-    """JSON-file backed store for :class:`BugReport` objects.
-
-    Each report is persisted as ``<root>/<id>.json``. The root directory is
-    created on demand, so constructing a store is always safe.
-    """
-
     def __init__(self, root: Path | str = ".repotrace/reports") -> None:
-        """Create a store rooted at ``root``, creating the directory if needed."""
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _path(self, report_id: str) -> Path:
-        """Return the on-disk path for ``report_id``."""
         return self.root / f"{report_id}.json"
 
     def save(self, report: BugReport, *, overwrite: bool = False) -> Path:
@@ -100,13 +85,10 @@ class ReportStore:
         return False
 
     def exists(self, report_id: str) -> bool:
-        """Return whether a report with ``report_id`` is stored."""
         return self._path(report_id).exists()
 
     def list_ids(self) -> list[str]:
-        """Return all stored report identifiers in sorted order."""
         return sorted(path.stem for path in self.root.glob("*.json"))
 
     def list(self) -> list[BugReport]:
-        """Load and return every stored report."""
         return [self.load(report_id) for report_id in self.list_ids()]

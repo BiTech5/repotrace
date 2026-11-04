@@ -1,25 +1,3 @@
-"""Command line interface for RepoTrace.
-
-The CLI exposes the full workflow — capture a failing command, list and inspect
-stored reports, replay them, and render Markdown reports — through a single
-``repotrace`` entry point.
-
-Subcommands:
-
-- ``capture`` — run a command, record a trace, and persist a bug report.
-- ``list`` — list the identifiers of every stored report.
-- ``show`` — print a stored report's metadata.
-- ``replay`` — re-run a stored command and compare it with the record.
-- ``replay-all`` — replay every stored report and summarise the sweep.
-- ``report`` — render a report, optionally with its replay verdict.
-- ``generate`` — emit a standalone pytest regression test.
-- ``version`` — print the installed version.
-
-Exit codes: ``0`` for success, ``1`` for a failed command or a replay that no
-longer reproduces, and ``2`` for a usage or lookup error. This makes the CLI
-usable in scripts and CI.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -47,8 +25,7 @@ from repotrace.report import (
 )
 from repotrace.storage import BugReport, ReportStore
 
-# Typer requires its Argument/Option factories to be called in the signature,
-# which B008 flags by design.
+# Typer requires its Argument/Option factories in the signature, which B008 flags.
 # ruff: noqa: B008
 
 app = typer.Typer(
@@ -64,12 +41,10 @@ DEFAULT_STORE = ".repotrace/reports"
 
 
 def _store(root: str | None) -> ReportStore:
-    """Build a report store, defaulting to ``DEFAULT_STORE``."""
     return ReportStore(root or DEFAULT_STORE)
 
 
 def _load(store: ReportStore, report_id: str) -> BugReport:
-    """Load ``report_id`` from ``store``, exiting with code 2 when missing."""
     try:
         return store.load(report_id)
     except FileNotFoundError as error:
@@ -100,7 +75,6 @@ def _replay_or_exit(
 
 
 def _write_or_exit(path: str, writer) -> None:
-    """Run a writer callback, reporting an OSError as a clean exit 2."""
     try:
         written = writer()
     except OSError as error:
@@ -110,17 +84,14 @@ def _write_or_exit(path: str, writer) -> None:
 
 
 def _exit_code_for_result(outcome: Outcome) -> int:
-    """Map a replay verdict onto a process exit code."""
     return 0 if outcome is Outcome.MATCHED else 1
 
 
 def _print_plain(text: str) -> None:
-    """Print rendered Markdown without Rich interpreting it as markup."""
     console.print(text, markup=False, highlight=False)
 
 
 def _summary_from_results(results: Sequence[ReplayResult]) -> ReplaySummary:
-    """Build a summary from already-computed replay results."""
     matched = sum(1 for result in results if result.matched)
     return build_summary(
         total=len(results),
@@ -131,7 +102,6 @@ def _summary_from_results(results: Sequence[ReplayResult]) -> ReplaySummary:
 
 
 def _print_replay_table(summary: ReplaySummary) -> None:
-    """Render a replay sweep as a coloured Rich table."""
     table = Table(title="Replay summary")
     table.add_column("Report", style="cyan", no_wrap=True)
     table.add_column("Outcome")
@@ -162,7 +132,6 @@ def _print_replay_table(summary: ReplaySummary) -> None:
     context_settings={
         "ignore_unknown_options": True,
         "allow_extra_args": True,
-        # Child arguments must not authorize report replacement.
         "allow_interspersed_args": False,
     }
 )

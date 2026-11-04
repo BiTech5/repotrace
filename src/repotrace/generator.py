@@ -1,16 +1,3 @@
-"""Regression test generation for RepoTrace.
-
-Turns a captured failure — either a :class:`~repotrace.storage.BugReport`
-produced by :mod:`repotrace.capture` or a raw
-:class:`~repotrace.capture.Trace` — into a standalone ``pytest`` test that
-re-runs the recorded command and asserts the original failure signature
-(exit code and captured output) has not changed.
-
-The generated test is intentionally self-contained: it embeds the command and
-expected output as literals so it can be committed next to the project and run
-without RepoTrace installed.
-"""
-
 from __future__ import annotations
 
 import keyword
@@ -55,7 +42,6 @@ class Reproduction(BaseModel):
         report_id: str | None = None,
         title: str = "",
     ) -> Reproduction:
-        """Build a reproduction from a captured :class:`Trace`."""
         return cls(
             command=list(trace.command),
             cwd=trace.cwd,
@@ -98,14 +84,12 @@ class Reproduction(BaseModel):
 
 
 def _field(event: Any, key: str, default: Any = None) -> Any:
-    """Read ``key`` from a mapping or model, tolerating either representation."""
     if isinstance(event, dict):
         return event.get(key, default)
     return getattr(event, key, default)
 
 
 def _command_from_events(events: list[Any]) -> list[str]:
-    """Return the argv recorded in the first ``command`` event, if any."""
     for event in events:
         if _field(event, "kind") != "command":
             continue
@@ -118,7 +102,6 @@ def _command_from_events(events: list[Any]) -> list[str]:
 
 
 def _join_messages(events: list[Any], kind: str) -> str:
-    """Concatenate the messages of every event with ``kind`` in order."""
     return "".join(
         str(_field(event, "message", ""))
         for event in events
@@ -127,7 +110,6 @@ def _join_messages(events: list[Any], kind: str) -> str:
 
 
 def slugify(text: str, *, fallback: str = "case") -> str:
-    """Convert ``text`` into a valid, lowercase Python identifier fragment."""
     slug = re.sub(r"[^0-9a-zA-Z]+", "_", text).strip("_").lower()
     slug = slug[:_MAX_NAME_LENGTH].strip("_")
     if not slug:
@@ -142,7 +124,6 @@ def slugify(text: str, *, fallback: str = "case") -> str:
 def _as_reproduction(
     source: Reproduction | Trace | BugReport,
 ) -> Reproduction:
-    """Coerce supported inputs into a :class:`Reproduction`."""
     if isinstance(source, Reproduction):
         return source
     if isinstance(source, Trace):
@@ -154,13 +135,11 @@ def _as_reproduction(
 
 
 def _default_function_name(reproduction: Reproduction) -> str:
-    """Derive a stable test function name from the reproduction source."""
     seed = reproduction.report_id or "captured"
     return f"test_regression_{slugify(seed, fallback='captured')}"
 
 
 def _docstring(text: str) -> str:
-    """Make ``text`` safe to embed inside a triple-quoted docstring."""
     return text.replace("\\", "\\\\").replace('"""', "'''").replace("\n", " ")
 
 

@@ -1,15 +1,3 @@
-"""Replay layer for RepoTrace.
-
-Re-runs the command recorded in a stored bug report and compares the fresh
-outcome against the one that was captured. A replay either *matches* (the
-failure still reproduces) or *differs*, in which case the new exit code and
-output are returned so the caller can decide whether to update the report or
-open one instead.
-
-A replay is self-contained: it needs nothing but the stored report, the
-reproducer, and a working directory.
-"""
-
 from __future__ import annotations
 
 from enum import Enum
@@ -24,15 +12,11 @@ from repotrace.storage import BugReport, ReportStore
 
 
 class Outcome(str, Enum):
-    """Verdict of a replay when compared against the recorded failure."""
-
     MATCHED = "matched"
     DIFFERS = "differs"
 
 
 class ReplayResult(BaseModel):
-    """Outcome of re-running a recorded command."""
-
     model_config = ConfigDict(frozen=True)
 
     report_id: str = Field(..., description="Identifier of the replayed report")
@@ -61,7 +45,6 @@ class ReplayResult(BaseModel):
 
     @property
     def matched(self) -> bool:
-        """Whether the replay reproduced the recorded failure."""
         return self.outcome is Outcome.MATCHED
 
     @property
@@ -71,8 +54,6 @@ class ReplayResult(BaseModel):
 
 
 class ReplaySummary(BaseModel):
-    """Roll-up of several replays, e.g. a whole report store."""
-
     model_config = ConfigDict(frozen=True)
 
     total: int = Field(default=0, description="Number of replays attempted")

@@ -1,19 +1,3 @@
-"""Report rendering for RepoTrace.
-
-Turns a :class:`~repotrace.storage.BugReport` or a
-:class:`~repotrace.replay.ReplayResult` / :class:`~repotrace.replay.ReplaySummary`
-into inspectable output. Two renderers are provided:
-
-- :func:`format_report` / :func:`write_report` — a self-contained Markdown
-  document for one captured failure, with its environment, events, and verdict.
-- :func:`format_replays` / :func:`write_replays` — a Markdown table rolling up
-  every replay in a sweep.
-
-Rendering is pure string building and never imports the CLI, so these functions
-stay usable from scripts and tests. Colour handling is delegated to ``rich``,
-which is already a project dependency.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -45,7 +29,6 @@ def format_datetime(value: datetime | str | None) -> str:
         return "—"
     if isinstance(value, str):
         try:
-            # Python 3.11+ fromisoformat already understands a trailing "Z".
             value = datetime.fromisoformat(value)
         except ValueError:
             return value
@@ -55,7 +38,6 @@ def format_datetime(value: datetime | str | None) -> str:
 
 
 def format_exit_code(code: int | None) -> str:
-    """Render an exit code, marking the success case explicitly."""
     if code is None:
         return "—"
     if code == 0:
@@ -64,20 +46,16 @@ def format_exit_code(code: int | None) -> str:
 
 
 def escape_cell(text: Any) -> str:
-    """Make ``text`` safe to place inside a Markdown table cell."""
     return str(text).replace("|", "\\|").replace("\n", " ")
 
 
 def truncate(text: str, limit: int = 120) -> str:
-    """Shorten ``text`` to ``limit`` characters, marking the cut."""
     if len(text) <= limit:
         return text
     return f"{text[: limit - 1]}…"
 
 
 class ReportSection(BaseModel):
-    """One titled block of a rendered report."""
-
     model_config = ConfigDict(frozen=True)
 
     title: str = Field(..., description="Heading of the section")
@@ -91,7 +69,6 @@ class ReportSection(BaseModel):
 
 
 def _summary_section(report: BugReport) -> ReportSection:
-    """Build the header section describing the report itself."""
     lines = [
         f"**ID:** `{report.id}`",
         f"**Status:** {report.status}",
@@ -108,7 +85,6 @@ def _summary_section(report: BugReport) -> ReportSection:
 
 
 def _metadata_section(metadata: dict[str, Any]) -> ReportSection:
-    """Render report metadata as a key/value list, dropping empty values."""
     lines: list[str] = []
     for key in sorted(metadata):
         value = metadata[key]
@@ -126,14 +102,12 @@ def _metadata_section(metadata: dict[str, Any]) -> ReportSection:
 
 
 def _event_field(event: Any, key: str, default: Any = None) -> Any:
-    """Read ``key`` from a mapping or a model, tolerating either form."""
     if isinstance(event, dict):
         return event.get(key, default)
     return getattr(event, key, default)
 
 
 def _events_section(events: Sequence[Any]) -> ReportSection:
-    """Render recorded trace events as an indexed listing."""
     lines: list[str] = []
     for event in events:
         index = _event_field(event, "index")
@@ -180,7 +154,6 @@ def _command_from_metadata(metadata: dict[str, Any]) -> list[str]:
 
 
 def _replay_lines(report: BugReport, result: ReplayResult) -> list[str]:
-    """Build the observed-versus-expected lines for a replay section."""
     command = _command_from_metadata(report.metadata)
     return [
         f"**Outcome:** `{result.outcome.value}` ({outcome_label(result.outcome)})",
@@ -282,19 +255,10 @@ def write_report(
 
 
 def _outcome_style(result: ReplayResult) -> str:
-    """Pick a colour for ``result`` based on its verdict."""
     return "green" if result.matched else "red"
 
 
 def render_result_line(result: ReplayResult) -> str:
-    """Return a one-line, coloured summary of a single replay.
-
-    Args:
-        result: The replay to summarise.
-
-    Returns:
-        A Rich markup string suitable for ``rich.print``.
-    """
     style = _outcome_style(result)
     label = result.report_id or "(no id)"
     detail = ", ".join(result.differences) if result.differences else "no differences"
@@ -302,15 +266,6 @@ def render_result_line(result: ReplayResult) -> str:
 
 
 def format_replays(summary: ReplaySummary, *, max_rows: int | None = None) -> str:
-    """Render a replay sweep as a Markdown table plus a totals block.
-
-    Args:
-        summary: The sweep to render.
-        max_rows: Optional cap on table rows, for very large stores.
-
-    Returns:
-        The Markdown source of the sweep report.
-    """
     lines = [
         "# Replay summary",
         "",

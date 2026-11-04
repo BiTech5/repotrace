@@ -1,10 +1,3 @@
-"""Capture layer for RepoTrace.
-
-Turns a failing command execution into structured trace artifacts: the
-command that ran, its output, the surrounding environment, and enough
-metadata to rebuild a :class:`~repotrace.storage.BugReport`.
-"""
-
 from __future__ import annotations
 
 import platform
@@ -21,8 +14,6 @@ from repotrace.storage import BugReport, ReportStore
 
 
 class TraceEvent(BaseModel):
-    """A single ordered step recorded while a command runs."""
-
     model_config = ConfigDict(frozen=True)
 
     index: int = Field(..., description="Zero-based position of the event in the trace")
@@ -63,8 +54,6 @@ def collect_environment(cwd: Path | str | None = None) -> dict[str, Any]:
 
 
 class Trace(BaseModel):
-    """An ordered record of everything observed for one captured run."""
-
     model_config = ConfigDict(frozen=True)
 
     command: list[str] = Field(
@@ -88,7 +77,6 @@ class Trace(BaseModel):
         command: list[str],
         cwd: Path | str | None = None,
     ) -> Trace:
-        """Create a trace for ``command`` and record its opening event."""
         workdir = Path(cwd) if cwd is not None else Path.cwd()
         trace = cls(
             command=list(command),
@@ -107,7 +95,6 @@ class Trace(BaseModel):
         message: str,
         data: dict[str, object] | None = None,
     ) -> Trace:
-        """Return a copy of the trace with one more event appended."""
         event = TraceEvent(
             index=len(self.events),
             kind=kind,
@@ -117,7 +104,6 @@ class Trace(BaseModel):
         return self.model_copy(update={"events": [*self.events, event]})
 
     def of_kind(self, kind: str) -> list[TraceEvent]:
-        """Return every event recorded with ``kind``."""
         return [event for event in self.events if event.kind == kind]
 
 

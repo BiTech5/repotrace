@@ -35,12 +35,10 @@ FLAGS = {
 
 
 def run(*args: str) -> object:
-    """Invoke the CLI with a fresh isolated environment."""
     return runner.invoke(app, list(args), catch_exceptions=False)
 
 
 def cli_opts(**kwargs) -> list[str]:
-    """Turn keyword options into a Typer CLI argv fragment."""
     argv: list[str] = []
     for key, value in kwargs.items():
         flag = FLAGS[key]
@@ -53,14 +51,12 @@ def cli_opts(**kwargs) -> list[str]:
 
 @pytest.fixture
 def store(tmp_path, monkeypatch):
-    """Point the CLI at an isolated store and return its path."""
     root = tmp_path / "reports"
     monkeypatch.setattr(cli, "DEFAULT_STORE", str(root))
     return root
 
 
 def capture_report(store, command=None, **kwargs) -> str:
-    """Capture a failing command through the CLI and return the report id."""
     result = run(
         "capture",
         "--store",
@@ -73,7 +69,6 @@ def capture_report(store, command=None, **kwargs) -> str:
 
 
 def rewrite_exit_code(store, report_id: str, exit_code: int) -> None:
-    """Persist ``report_id`` with a different recorded exit code."""
     store_obj = ReportStore(store)
     stored = store_obj.load(report_id)
     store_obj.save(
@@ -274,7 +269,6 @@ def test_child_overwrite_flag_does_not_authorize_replacing_a_report(store):
 
 
 def test_list_reports(store):
-    """Repeated captures remain separate reports in the list."""
     first = capture_report(store)
     second = capture_report(store)
 

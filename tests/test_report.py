@@ -40,7 +40,6 @@ def make_replay(
 
 
 def make_captured_report(tmp_path) -> BugReport:
-    """Capture a real failing run and return the report it produced."""
     trace = run_capture(
         [sys.executable, "-c", "import sys; print('out'); sys.exit(2)"], cwd=tmp_path
     )
