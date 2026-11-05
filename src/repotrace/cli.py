@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import typer
 from rich.console import Console
@@ -17,12 +18,15 @@ from repotrace.replay import (
 )
 from repotrace.report import (
     build_summary,
+    format_datetime,
     format_exit_code,
     format_report,
+    format_report_list,
     render_result_line,
     write_replays,
     write_report,
 )
+from repotrace.search import ReportFilter, filter_reports, report_exit_code
 from repotrace.storage import BugReport, ReportStore
 
 # Typer requires its Argument/Option factories in the signature, which B008 flags.
@@ -128,6 +132,67 @@ def _print_replay_table(summary: ReplaySummary) -> None:
     )
 
 
+def _parse_filter_datetime(
+    value: str, option: str, *, end_of_day: bool = False
+) -> datetime:
+
+    text = value.strip()
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as error:
+        raise typer.BadParameter(
+            f"invalid date {value!r}; use YYYY-MM-DD or ISO-8601",
+            param_hint=option,
+        ) from error
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    if end_of_day and len(text) == 10:
+        parsed = parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return parsed.astimezone(UTC)
+
+
+def _parse_filter_text(value: str | None, option: str) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        raise typer.BadParameter("value cannot be empty", param_hint=option)
+    return text
+
+
+def _parse_filter_tags(value: str | None) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    tags = tuple(dict.fromkeys(tag.strip() for tag in value.split(",") if tag.strip()))
+    if not tags:
+        raise typer.BadParameter(
+            "provide at least one tag, e.g. --tags flaky,ci", param_hint="--tags"
+        )
+    return tags
+
+
+def _print_search_results(reports: Sequence[BugReport]) -> None:
+    table = Table(title="Search results")
+    table.add_column("Report", style="cyan", no_wrap=True)
+    table.add_column("Title")
+    table.add_column("Severity")
+    table.add_column("Exit code", justify="right")
+    table.add_column("Tags")
+    table.add_column("Created")
+
+    for report in reports:
+        table.add_row(
+            report.id,
+            report.title,
+            report.severity or "—",
+            format_exit_code(report_exit_code(report)),
+            ", ".join(report.tags) or "—",
+            format_datetime(report.created_at),
+        )
+    console.print(table)
+    console.print(f"[dim]{len(reports)} matching report(s)[/dim]")
+
+
 @app.command(
     context_settings={
         "ignore_unknown_options": True,
@@ -226,6 +291,76 @@ def list_reports(
     for report_id in ids:
         console.print(report_id)
     console.print(f"\n[dim]{len(ids)} report(s)[/dim]")
+
+
+@app.command()
+def search(
+    title: str | None = typer.Option(
+        None,
+        "--title",
+        help="Case-insensitive substring of the report title.",
+    ),
+    tags: str | None = typer.Option(
+        None,
+        "--tags",
+        help="Comma-separated tags; every tag must be present, e.g. 'flaky,ci'.",
+    ),
+    severity: str | None = typer.Option(
+        None, "--severity", help="Severity to match, e.g. high."
+    ),
+    exit_code: int | None = typer.Option(
+        None, "--exit-code", help="Exit code recorded in the report metadata."
+    ),
+    since: str | None = typer.Option(
+        None,
+        "--since",
+        help="Include reports created on or after this date (YYYY-MM-DD or ISO-8601).",
+    ),
+    until: str | None = typer.Option(
+        None,
+        "--until",
+        help="Include reports created on or before this date (YYYY-MM-DD or ISO-8601).",
+    ),
+    store: str | None = typer.Option(
+        None,
+        "--store",
+        "-s",
+        help=f"Report store directory (default: {DEFAULT_STORE}).",
+    ),
+    as_markdown: bool = typer.Option(
+        False, "--markdown", help="Render results as a Markdown table."
+    ),
+) -> None:
+    """Search stored reports by title, tags, severity, exit code, or date."""
+    start = _parse_filter_datetime(since, "--since") if since is not None else None
+    end = (
+        _parse_filter_datetime(until, "--until", end_of_day=True)
+        if until is not None
+        else None
+    )
+    if start is not None and end is not None and start > end:
+        raise typer.BadParameter(
+            "--since must be on or before --until", param_hint="--since/--until"
+        )
+
+    criteria = ReportFilter(
+        title=_parse_filter_text(title, "--title"),
+        tags=_parse_filter_tags(tags),
+        severity=_parse_filter_text(severity, "--severity"),
+        exit_code=exit_code,
+        since=start,
+        until=end,
+    )
+
+    reports = filter_reports(_store(store).list(), criteria)
+    if not reports:
+        console.print("[dim]no matching reports[/dim]")
+        return
+
+    if as_markdown:
+        _print_plain(format_report_list(reports))
+        return
+    _print_search_results(reports)
 
 
 @app.command()
@@ -511,6 +646,7 @@ __all__ = [
     "replay",
     "replay_all_command",
     "report",
+    "search",
     "show",
     "version",
 ]
