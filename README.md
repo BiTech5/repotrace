@@ -55,6 +55,9 @@ code, so it can sit directly in a shell pipeline.
 repotrace list
 repotrace show <id>
 
+# Narrow the store by title, tags, severity, exit code, or date
+repotrace search --title database --severity high
+
 # Does it still fail the same way?
 repotrace replay <id>
 
@@ -67,7 +70,7 @@ repotrace replay-all
 ```
 capture ──► report store ──► replay ──► report / generate
                 │                              │
-                └──────────── list / show ◄────┘
+                └───── list / search / show ◄──┘
 ```
 
 1. **Capture** a failing command. Its argv, output, exit code, working
@@ -124,6 +127,43 @@ Print the id of every stored report, one per line, followed by a count. Prints
 ```bash
 repotrace list [--store PATH]
 ```
+
+### `search`
+
+Search stored reports by title, tags, severity, exit code, and creation date.
+Every option is optional, and supplied filters are combined with AND. Results
+are printed newest first as a table of id, title, severity, exit code, tags, and
+creation time.
+
+```bash
+repotrace search [OPTIONS]
+```
+
+| Option | Description |
+| --- | --- |
+| `--title TEXT` | Case-insensitive substring of the report title. |
+| `--tags TEXT` | Comma-separated tags; every tag must be present, e.g. `flaky,ci`. |
+| `--severity TEXT` | Severity to match, compared case-insensitively. |
+| `--exit-code INT` | Match the exit code recorded in the report metadata. |
+| `--since DATE` | Inclusive lower bound on the creation date. Accepts `YYYY-MM-DD` or ISO-8601. |
+| `--until DATE` | Inclusive upper bound on the creation date. A date-only value includes the whole day. |
+| `--store, -s PATH` | Report store directory. |
+| `--markdown` | Render the results as a Markdown table instead of a console table. |
+
+```bash
+# Title and tag search
+repotrace search --title database --tags flaky,ci
+
+# Severity, exit code, and a date range together
+repotrace search --severity high --exit-code 1 \
+  --since 2026-01-01 --until 2026-01-31
+
+# Machine-readable Markdown for a report comment
+repotrace search --tags regression --markdown
+```
+
+A search with no matches prints `no matching reports` and exits `0`. An invalid
+date or a reversed date range exits `2` with a usage error.
 
 ### `show`
 
@@ -224,7 +264,7 @@ part of the interface:
 | --- | --- |
 | `0` | Success. |
 | `1` | A captured command failed, or a replay no longer reproduces. |
-| `2` | Usage or lookup error: a missing report, a missing binary, an unwritable output path. |
+| `2` | Usage or lookup error: a missing report, a missing binary, an unwritable output path, or an invalid search filter. |
 
 `capture` propagates the captured command's own exit code. Use `--keep-going` on
 `capture`, `replay`, or `replay-all` to force `0` regardless.
