@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from repotrace.replay import Outcome, ReplayResult, ReplaySummary
+from repotrace.search import report_exit_code
 from repotrace.storage import BugReport
 
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S UTC"
@@ -290,6 +291,39 @@ def format_replays(summary: ReplaySummary, *, max_rows: int | None = None) -> st
     if max_rows is not None and len(summary.results) > max_rows:
         hidden = len(summary.results) - max_rows
         lines.append(f"| … | … | … | {hidden} more not shown |")
+    return "\n".join(lines) + "\n"
+
+
+def format_report_list(
+    reports: Sequence[BugReport], *, title: str = "Search results"
+) -> str:
+    """Render a collection of reports as a Markdown table.
+
+    Args:
+        reports: Reports to list, typically the result of a search.
+        title: Heading for the rendered table.
+
+    Returns:
+        A Markdown document with one row per report.
+    """
+    lines = [
+        f"# {title}",
+        "",
+        "| Report | Title | Severity | Exit code | Tags | Created |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for report in reports:
+        lines.append(
+            "| "
+            f"`{escape_cell(report.id)}` | "
+            f"{escape_cell(truncate(report.title))} | "
+            f"{escape_cell(report.severity or '—')} | "
+            f"{escape_cell(format_exit_code(report_exit_code(report)))} | "
+            f"{escape_cell(', '.join(report.tags) or '—')} | "
+            f"{escape_cell(format_datetime(report.created_at))} |"
+        )
+    if not reports:
+        lines.append("| _No matching reports._ | | | | | |")
     return "\n".join(lines) + "\n"
 
 
