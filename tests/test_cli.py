@@ -1,5 +1,7 @@
+import re
 import subprocess
 import sys
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -7,7 +9,7 @@ from typer.testing import CliRunner
 
 from repotrace import cli
 from repotrace.cli import app
-from repotrace.storage import ReportStore
+from repotrace.storage import BugReport, ReportStore
 
 runner = CliRunner()
 
@@ -77,6 +79,35 @@ def rewrite_exit_code(store, report_id: str, exit_code: int) -> None:
         ),
         overwrite=True,
     )
+
+
+def store_report(
+    store,
+    report_id: str,
+    *,
+    title: str = "Sample failure",
+    tags: list[str] | None = None,
+    severity: str | None = None,
+    exit_code: int | None = None,
+    created_at: datetime | None = None,
+) -> str:
+    metadata = {} if exit_code is None else {"exit_code": exit_code}
+    kwargs = {} if created_at is None else {"created_at": created_at}
+    ReportStore(store).save(
+        BugReport(
+            id=report_id,
+            title=title,
+            tags=tags or [],
+            severity=severity,
+            metadata=metadata,
+            **kwargs,
+        )
+    )
+    return report_id
+
+
+def search_ids(output: str) -> list[str]:
+    return re.findall(r"^\| `([^`]+)` \|", output, re.MULTILINE)
 
 
 # --- capture ------------------------------------------------------------
@@ -314,6 +345,178 @@ def test_show_missing_report_exits_two(store):
     assert "no such report" in result.output
 
 
+# --- search -------------------------------------------------------------
+
+
+def test_search_by_title(store):
+    store_report(store, "a", title="Database timeout")
+    store_report(store, "b", title="CLI rejects --json")
+
+    result = run("search", "--store", str(store), "--title", "database")
+
+    assert result.exit_code == 0
+    assert "Database timeout" in result.output
+    assert "CLI rejects" not in result.output
+    assert "1 matching report(s)" in result.output
+
+
+def test_search_by_tags(store):
+    store_report(store, "a", tags=["flaky", "ci"])
+    store_report(store, "b", tags=["flaky", "database"])
+
+    result = run("search", "--store", str(store), "--tags", "flaky,ci", "--markdown")
+
+    assert result.exit_code == 0
+    assert search_ids(result.output) == ["a"]
+
+
+def test_search_by_severity(store):
+    store_report(store, "a", severity="high")
+    store_report(store, "b", severity="low")
+
+    result = run("search", "--store", str(store), "--severity", "HIGH", "--markdown")
+
+    assert result.exit_code == 0
+    assert search_ids(result.output) == ["a"]
+
+
+def test_search_by_exit_code(store):
+    store_report(store, "a", exit_code=3)
+    store_report(store, "b", exit_code=1)
+
+    result = run("search", "--store", str(store), "--exit-code", "3", "--markdown")
+
+    assert result.exit_code == 0
+    assert search_ids(result.output) == ["a"]
+
+
+def test_search_by_inclusive_date_range(store):
+    store_report(store, "a", created_at=datetime(2026, 1, 1, 12, tzinfo=UTC))
+    store_report(store, "b", created_at=datetime(2026, 1, 2, 12, tzinfo=UTC))
+    store_report(store, "c", created_at=datetime(2026, 1, 3, 12, tzinfo=UTC))
+
+    result = run(
+        "search",
+        "--store",
+        str(store),
+        "--since",
+        "2026-01-02",
+        "--until",
+        "2026-01-02",
+        "--markdown",
+    )
+
+    assert result.exit_code == 0
+    assert search_ids(result.output) == ["b"]
+
+
+def test_search_combines_filters(store):
+    store_report(
+        store,
+        "a",
+        title="Database timeout",
+        tags=["flaky", "ci"],
+        severity="high",
+        exit_code=3,
+    )
+    store_report(
+        store,
+        "b",
+        title="Database migration",
+        tags=["database"],
+        severity="high",
+        exit_code=3,
+    )
+    store_report(
+        store,
+        "c",
+        title="Database timeout",
+        tags=["flaky", "ci"],
+        severity="low",
+        exit_code=3,
+    )
+
+    result = run(
+        "search",
+        "--store",
+        str(store),
+        "--title",
+        "database",
+        "--tags",
+        "flaky,ci",
+        "--severity",
+        "high",
+        "--exit-code",
+        "3",
+        "--markdown",
+    )
+
+    assert result.exit_code == 0
+    assert search_ids(result.output) == ["a"]
+
+
+def test_search_no_match_exits_zero_with_message(store):
+    store_report(store, "a", title="Database timeout")
+
+    result = run("search", "--store", str(store), "--title", "missing")
+
+    assert result.exit_code == 0
+    assert "no matching reports" in result.output
+
+
+def test_search_empty_store(store):
+    result = run("search", "--store", str(store), "--title", "anything")
+
+    assert result.exit_code == 0
+    assert "no matching reports" in result.output
+
+
+def test_search_markdown_output(store):
+    store_report(store, "a", title="Database timeout", severity="high", exit_code=3)
+
+    result = run("search", "--store", str(store), "--markdown")
+
+    assert result.exit_code == 0
+    assert result.output.startswith("# Search results")
+    assert "| Report | Title | Severity | Exit code | Tags | Created |" in result.output
+
+
+def test_search_invalid_date_exits_two(store):
+    result = run("search", "--store", str(store), "--since", "not-a-date")
+
+    assert result.exit_code == 2
+    assert "invalid date" in result.output
+
+
+def test_search_rejects_reversed_date_range(store):
+    result = run(
+        "search",
+        "--store",
+        str(store),
+        "--since",
+        "2026-03-01",
+        "--until",
+        "2026-02-01",
+    )
+
+    assert result.exit_code == 2
+    assert "on or before" in result.output
+
+
+def test_search_rejects_empty_tags(store):
+    result = run("search", "--store", str(store), "--tags", ",,")
+
+    assert result.exit_code == 2
+    assert "at least one tag" in result.output
+
+
+def test_search_rejects_empty_title(store):
+    result = run("search", "--store", str(store), "--title", "  ")
+
+    assert result.exit_code == 2
+    assert "cannot be empty" in result.output
+
+
 # --- replay -------------------------------------------------------------
 
 
@@ -541,6 +744,7 @@ def test_help_lists_commands():
     for name in (
         "capture",
         "list",
+        "search",
         "show",
         "replay",
         "replay-all",
